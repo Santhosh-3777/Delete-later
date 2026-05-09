@@ -1,0 +1,565 @@
+You are a Senior AI Solutions Architect, Principal Full-Stack Engineer, Database Copilot Platform Architect, and Security-First Multi-Agent Systems Engineer.
+
+Your task is to design and build a production-grade MVP web application for a Universal Database Agent Platform.
+
+The product is a chat-based AI assistant for databases with:
+- Multi-database support: MongoDB, Oracle, MySQL
+- Multi-persona support: DBA, Operations, Developer
+- Environment awareness: Dev, Staging, Prod
+- Chat-first user experience
+- MCP-ready architecture with database-specific connectors/adapters
+- Centralized RBAC and least-privilege enforcement
+- Read-only default execution
+- Approval workflow for risky or elevated actions
+- Full auditability, observability, and traceability
+
+The architecture must follow this design principle:
+- One common platform for all databases
+- One orchestrator/supervisor at the top
+- Shared agents/services for metadata, validation, safety, and explanations
+- Database-specific execution adapters or MCP connectors underneath
+- Persona-aware workflows
+- Backend-enforced least privilege
+- UI selection must never be treated as security by itself
+
+==================================================
+1. PRODUCT GOAL
+==================================================
+
+Build an enterprise-style chat application where a user can:
+- Select database type: MongoDB, Oracle, MySQL
+- Select persona: DBA, Operations, Developer
+- Select environment: Dev, Staging, Prod
+- Ask natural-language questions about schema, queries, diagnostics, health, indexes, performance, and recommendations
+- View generated SQL or MongoDB aggregation pipeline before execution
+- Execute allowed read-only actions
+- Receive structured answers, recommendations, warnings, and explanation
+- See history, traces, and prior conversations in the UI
+- Escalate risky actions into an approval workflow instead of executing them directly
+
+==================================================
+2. PRIMARY DESIGN DECISION
+==================================================
+
+Do NOT build one universal agent that directly handles all databases in the same way.
+Do NOT build separate standalone products for each database.
+
+Instead build:
+- A unified chat application with a common orchestration/control plane
+- Shared AI services
+- Database-specific adapters/connectors for MongoDB, Oracle, and MySQL
+- Persona-specific policies and UX behavior
+- Centralized policy enforcement and least-privilege control
+
+==================================================
+3. REQUIRED CORE FEATURES
+==================================================
+
+Include all of the following:
+
+A. Database selection
+- Dropdown for database type
+- Options: MongoDB, Oracle, MySQL
+
+B. Persona selection
+- Dropdown for role/persona
+- Options: DBA, Operations, Developer
+
+C. Environment selection
+- Dropdown for environment
+- Options: Dev, Staging, Prod
+
+D. Chat interface
+- Prompt text box
+- Submit button
+- Enter-to-send support
+- Optional shift+enter for multiline input
+- Assistant response area
+- Typing/loading state
+- Streaming-ready response UI
+- Markdown rendering
+- Code/query block rendering
+- Query/pipeline preview section
+- Copy button for generated SQL/pipeline
+- Expand/collapse for detailed output
+- Suggested follow-up prompts
+
+E. Chat history
+- History tab or left sidebar
+- List of previous chat sessions
+- Session title generation
+- Search history
+- Reopen past conversations
+- Clear chat
+- Delete session
+- Pin important sessions
+
+F. Context panels
+- Active database, persona, and environment visible at top
+- Current session metadata
+- Database connection status indicator
+- Permission scope badge, for example “Read-only” or “Approval required”
+
+G. Approval flow
+- If an action is risky or outside allowed role scope, do not execute directly
+- Send it to approval workflow
+- Show “Approval required” status in UI
+- Show reason, action summary, target resource, requester, and approval state
+
+H. Governance and traceability
+- Every action logged
+- Tool trace visibility
+- Policy decision log
+- Execution outcome log
+- Query preview before execution
+- Explain why an action was blocked, allowed, or requires approval
+
+I. Safety and validation
+- SQL validation before execution
+- Mongo pipeline validation before execution
+- Read-only checker by default
+- Role-based tool restriction
+- Environment-aware restriction, especially Prod
+
+J. Database-specific support
+- MongoDB: collection listing, schema inference, aggregation generation, index review, read-only operations
+- Oracle: schemas, tables, views, metadata lookup, explain plan support, diagnostics, read-only query path
+- MySQL: schema discovery, SQL generation, explain support, diagnostics, read-only query path
+
+==================================================
+4. UI REQUIREMENTS
+==================================================
+
+Design a modern enterprise web app UI.
+
+Main layout should include:
+
+1. Left Sidebar
+- App logo/name
+- New Chat button
+- Chat history list
+- Search history input
+- Pinned conversations
+- Filters such as database/persona/environment
+- Settings button
+
+2. Top Header
+- Product title
+- Database dropdown
+- Persona dropdown
+- Environment dropdown
+- Connection status indicator
+- Permission badge
+- User profile menu
+- Theme toggle
+
+3. Main Chat Area
+- Welcome/empty state for new session
+- Message list with user and assistant messages
+- Support for long answers with sections
+- SQL or Mongo pipeline preview cards
+- Warnings and validation messages
+- Suggested next actions
+- Regenerate response option
+- Feedback thumbs up/down
+
+4. Right Context Panel or Tabbed Side Panel
+Include tabs such as:
+- Context
+- Query Preview
+- Trace
+- Permissions
+- Approvals
+- Execution Result
+
+Details:
+- Context tab shows selected DB, persona, environment, current schema context, connection details summary
+- Query Preview tab shows generated SQL or aggregation pipeline before execution
+- Trace tab shows orchestrator steps, selected adapter, validator result, policy result
+- Permissions tab shows effective permissions for current session
+- Approvals tab shows pending and past approvals
+- Execution Result tab shows rows returned, latency, status, and summary
+
+5. Bottom Prompt Composer
+- Large text box for prompt
+- Placeholder examples based on selected persona
+- Submit button
+- Attach context button if needed later
+- Keyboard shortcut hint
+- Disable button during execution
+- Character limit handling if needed
+
+==================================================
+5. CHAT UX BEHAVIOR
+==================================================
+
+Make the chat UX role-aware and context-aware.
+
+Examples of placeholder text:
+- DBA: “Check slow queries in Oracle prod and suggest index improvements.”
+- Operations: “Why is MySQL prod latency high in the last hour?”
+- Developer: “Generate a MongoDB aggregation to find top users by activity in staging.”
+
+Examples of suggested prompts by persona:
+DBA:
+- Analyze index usage
+- Review explain plan
+- Compare schema changes
+- Suggest optimization steps
+
+Operations:
+- Check DB health
+- Diagnose high latency
+- Review failed jobs
+- Investigate incident symptoms
+
+Developer:
+- Explain schema
+- Generate read-only query
+- Show sample query
+- Translate requirement into SQL or Mongo aggregation
+
+The UI must adapt suggestions dynamically based on selected database + persona.
+
+==================================================
+6. SECURITY AND LEAST PRIVILEGE REQUIREMENTS
+==================================================
+
+This is mandatory.
+
+Do NOT trust the UI dropdown for authorization.
+The selected persona is a requested mode, not the final source of truth.
+
+Implement:
+- Authentication layer
+- User role verification
+- Centralized RBAC/ABAC policy engine
+- Least-privilege enforcement
+- Deny by default unless explicitly allowed
+- Read-only default behavior
+- Separate credentials by database + environment + persona
+- Time-bound elevated access for risky operations
+- Approval gate for writes, destructive actions, or admin-level actions
+- Full audit logs for every policy decision and execution attempt
+
+Policy model should support permissions like:
+- schema.read
+- metadata.read
+- query.generate
+- query.execute.readonly
+- diagnostics.read
+- explain.read
+- index.review
+- health.read
+- jobs.read
+- ddl.propose
+- ddl.execute.approval_required
+- admin.elevated.approval_required
+
+==================================================
+7. BACKEND ARCHITECTURE REQUIREMENTS
+==================================================
+
+Build the system with these logical layers:
+
+1. Frontend
+- Chat web app
+- Session management in UI
+- History and conversation state
+- Role/database/environment selectors
+- Approval status and trace display
+
+2. API/Backend Layer
+- REST and/or websocket endpoints
+- Request validation
+- Session orchestration
+- Streaming response support
+
+3. Identity and Access Control
+- User auth
+- Role lookup
+- Policy engine
+- Approval service
+- Credential broker / secret manager integration
+
+4. Orchestrator / Supervisor
+- Understand intent
+- Route to correct agent flow
+- Select proper database adapter
+- Enforce allowed tool scope from policy engine
+- Keep step-by-step execution state
+
+5. Shared AI Services
+- Metadata/schema agent
+- Query generation agent
+- Validation/critic agent
+- Explanation agent
+- Recommendation agent
+
+6. Safety Layer
+- Read-only guard
+- SQL validator
+- Mongo aggregation validator
+- PII redaction
+- Production protection checks
+- Cost/token guardrails
+
+7. MCP/Adapter Layer
+- One database-specific adapter or MCP connector per DB
+- MongoDB adapter
+- Oracle adapter
+- MySQL adapter
+
+8. Data/Execution Layer
+- Credential broker
+- Read-only and limited credentials
+- Database connections
+- Query execution
+- Logging of execution results
+
+9. Governance / Observability
+- Audit logs
+- Prompt logs
+- Policy decisions
+- Agent traces
+- Tool execution traces
+- Metrics
+- Alerts
+- Evaluation harness
+
+==================================================
+8. REQUIRED DATABASE ADAPTER BEHAVIOR
+==================================================
+
+MongoDB adapter must support:
+- List databases
+- List collections
+- Infer schema from sample docs
+- Suggest aggregation pipeline
+- Explain aggregation logic
+- Read-only execution
+- Index review hints
+
+Oracle adapter must support:
+- List schemas, tables, views
+- Describe columns and metadata
+- Generate read-only SQL
+- Explain-plan-oriented analysis
+- Diagnostics suggestions
+- Performance hints
+- Approval-required handling for sensitive operations
+
+MySQL adapter must support:
+- Schema discovery
+- Table/column inspection
+- SQL generation
+- Explain support
+- Diagnostics hints
+- Read-only execution
+
+==================================================
+9. AGENT AND TOOLING LOGIC
+==================================================
+
+Implement a supervisor pattern.
+
+Supervisor responsibilities:
+- Interpret user request
+- Determine intent category: schema help, query generation, performance diagnosis, health check, recommendation, change request
+- Identify selected database
+- Identify selected persona
+- Identify target environment
+- Request effective permissions from policy engine
+- Invoke only allowed sub-agents and connectors
+- Ask clarifying questions only if strictly necessary
+- Return structured response plus query preview
+
+Sub-agents/services:
+- Metadata Agent
+- Query Generator Agent
+- Validator/Critic Agent
+- Safety Agent
+- Explanation Agent
+- Approval Agent
+- Trace/Audit Service
+
+==================================================
+10. PERMISSION MODEL
+==================================================
+
+Provide a permission matrix for:
+- MongoDB x DBA / Operations / Developer
+- Oracle x DBA / Operations / Developer
+- MySQL x DBA / Operations / Developer
+Across:
+- Dev
+- Staging
+- Prod
+
+High-level expected defaults:
+- Developer: mostly read-only in dev/staging, heavily restricted in prod
+- Operations: health/diagnostics oriented, limited structural change rights
+- DBA: broader metadata and tuning access, but risky/destructive actions still require approval
+- Production should be stricter than dev/staging
+- Destructive or write operations should never run silently
+
+==================================================
+11. PAGES / SCREENS TO BUILD
+==================================================
+
+Build these screens/components:
+
+- Login page
+- Main chat page
+- New chat state
+- Chat session page
+- History/search panel
+- Approvals page or approval drawer
+- Settings page
+- Audit/trace viewer page or side panel
+- Permission details modal
+- Connection status component
+- Query preview component
+- Execution result component
+- Empty states
+- Error states
+- Loading states
+- Access denied states
+
+==================================================
+12. OUTPUT FORMAT EXPECTED FROM YOU
+==================================================
+
+Generate all of the following in a structured way:
+
+A. Solution overview
+B. End-to-end architecture
+C. Frontend architecture
+D. Backend architecture
+E. Data flow
+F. Agent flow
+G. Permission model
+H. UI component hierarchy
+I. API contract suggestions
+J. Database adapter contract design
+K. Folder structure
+L. MVP scope vs later roadmap
+M. Key security controls
+N. Approval workflow design
+O. Observability design
+P. Suggested tech stack
+Q. Wireframe description for each screen
+R. Acceptance criteria
+S. Risks and mitigation
+T. Phased implementation plan
+
+==================================================
+13. FRONTEND IMPLEMENTATION GUIDELINES
+==================================================
+
+Use a modern web stack suitable for an enterprise chat app.
+Recommended:
+- React or Next.js frontend
+- TypeScript
+- Component-based architecture
+- Clean state management
+- Reusable chat/message components
+- Responsive design
+- Dark/light mode
+- Accessible keyboard-first UX
+
+Frontend components should include:
+- AppShell
+- Sidebar
+- Header
+- DatabaseSelector
+- PersonaSelector
+- EnvironmentSelector
+- ConnectionBadge
+- PermissionBadge
+- ChatMessageList
+- ChatMessage
+- QueryPreviewCard
+- TracePanel
+- ApprovalPanel
+- HistoryPanel
+- Composer
+- SessionTabs
+- ResultCard
+- EmptyState
+- ErrorState
+
+==================================================
+14. BACKEND IMPLEMENTATION GUIDELINES
+==================================================
+
+Recommended backend:
+- Python FastAPI or Node.js backend
+- Python preferred if stronger for agent orchestration
+- LangGraph or similar orchestration framework is optional but recommended if useful
+- Policy engine abstraction
+- Secret manager abstraction
+- Adapter pattern for DB integrations
+- WebSocket or SSE for streaming chat responses
+- Structured logging throughout
+
+==================================================
+15. NON-FUNCTIONAL REQUIREMENTS
+==================================================
+
+The solution must be:
+- Secure by default
+- Read-only by default
+- Scalable across more databases later
+- Extensible for more personas later
+- Observable
+- Auditable
+- Modular
+- Maintainable
+- Production-oriented
+- Clear enough for an MVP but architected for enterprise extension
+
+==================================================
+16. UX / QUALITY BAR
+==================================================
+
+The result must not be a toy chatbot.
+It should feel like a serious enterprise database copilot.
+
+Avoid:
+- Generic chatbot UI
+- One large unstructured response panel
+- No history
+- No traceability
+- No approval flow
+- No permissions clarity
+- No environment awareness
+- No database-aware or persona-aware UX
+
+Include:
+- Professional dashboard/chat product feel
+- Clear system state
+- Clear permission state
+- Clear action state
+- Clear execution state
+- Explainability
+- Safe defaults
+
+==================================================
+17. FINAL INSTRUCTION
+==================================================
+
+Generate the complete system design and implementation-ready blueprint for this product.
+Be highly detailed, practical, and production-oriented.
+Where appropriate, include:
+- architecture diagrams in text
+- tables
+- component trees
+- API examples
+- folder structure
+- detailed UI behavior
+- backend workflow
+- security enforcement points
+- acceptance criteria
+
+If any ambiguity exists, choose the safest and most enterprise-appropriate default.
