@@ -1,0 +1,506 @@
+You are a Senior LangGraph Architect, Principal Python Backend Engineer, Multi-Agent Systems Designer, and Security-First Database Copilot Builder.
+
+Your task is to convert my already-designed Universal Database Agent Platform into an implementation-ready LangGraph-based system.
+
+I have already finalized the product concept and UI requirements.
+Now I want the backend orchestration and agent workflow implemented using LangGraph.
+
+Build the system around this architecture:
+
+- One top-level orchestrator/supervisor agent
+- One database agent per database:
+  - MongoDB Agent
+  - Oracle Agent
+  - MySQL Agent
+- Each database agent should have its own sub-agents/workflow nodes
+- Shared safety, validation, RBAC, approval, and observability services
+- MCP-ready adapters or tool wrappers under the database-specific agent paths
+- Frontend remains a chat-based UI with database selector, persona selector, environment selector, history, prompt textbox, submit button, trace panel, and approvals panel
+
+This system must be production-oriented, modular, and safe by default.
+
+==================================================
+1. PRODUCT CONTEXT
+==================================================
+
+The application is a chat-based database copilot platform.
+
+Supported databases:
+- MongoDB
+- Oracle
+- MySQL
+
+Supported personas:
+- DBA
+- Operations
+- Developer
+
+Supported environments:
+- Dev
+- Staging
+- Prod
+
+The user flow is:
+1. User selects database
+2. User selects persona
+3. User selects environment
+4. User types a natural language request in chat
+5. Backend runs LangGraph workflow
+6. System routes to the proper database agent
+7. Database-specific sub-agents generate or analyze query/pipeline
+8. Safety/validation checks run
+9. Policy engine decides allow / deny / approval required
+10. If allowed, execute via least-privileged adapter/credential
+11. Return structured result, explanation, trace, and query preview
+
+==================================================
+2. WHAT I WANT YOU TO GENERATE
+==================================================
+
+Generate a full implementation blueprint and code-ready architecture for this system using LangGraph.
+
+I want the output to include:
+
+A. LangGraph architecture overview
+B. Exact node-by-node graph design
+C. State schema design
+D. Shared graph state model
+E. Supervisor routing logic
+F. Database-specific subgraph design
+G. Safety and validation node design
+H. Approval workflow node design
+I. RBAC and least-privilege enforcement design
+J. MCP integration design
+K. Python folder structure
+L. Pydantic models / typed state models
+M. FastAPI integration approach
+N. API routes
+O. Streaming response strategy
+P. Session persistence / checkpointing strategy
+Q. Observability and tracing design
+R. Recommended tech stack
+S. MVP implementation order
+T. Sample skeleton code for key files
+
+==================================================
+3. LANGGRAPH ARCHITECTURE REQUIREMENTS
+==================================================
+
+Use LangGraph as the orchestration framework.
+
+I want this hierarchy:
+
+Top level:
+- Entry node
+- Auth / identity node
+- Policy precheck node
+- Supervisor node
+- Database routing node
+- Shared validation/safety nodes
+- Approval node
+- Execution node
+- Formatter / response node
+- Audit / trace logging node
+
+Database-specific subgraphs:
+- MongoDB subgraph
+- Oracle subgraph
+- MySQL subgraph
+
+Each database subgraph should contain its own internal nodes/sub-agents.
+
+==================================================
+4. REQUIRED TOP-LEVEL GRAPH
+==================================================
+
+Design a top-level StateGraph that includes at least these nodes:
+
+1. ingest_request
+- normalize frontend request
+- capture user_id, session_id, prompt, database, persona, environment
+
+2. authenticate_user
+- validate user/session/JWT
+- attach principal info to state
+
+3. load_user_permissions
+- load actual assigned roles and policies
+- do not trust selected persona blindly
+
+4. precheck_policy
+- determine if selected persona is allowed
+- determine effective permissions
+- assign permission scope
+- assign execution mode such as readonly / approval_required / deny
+
+5. supervisor
+- classify user intent
+- decide task category such as:
+  - schema_help
+  - query_generation
+  - diagnostics
+  - health_check
+  - optimization
+  - change_request
+  - approval_request
+- route to correct database subgraph
+
+6. route_database_graph
+- send request to MongoDB / Oracle / MySQL graph based on state.database
+
+7. safety_gate
+- run common safety checks after subgraph output
+- enforce readonly restrictions
+- detect dangerous actions
+- validate generated output shape
+
+8. approval_gate
+- if action is risky or elevated, pause and create approval item
+- return approval-required response
+- do not execute directly
+
+9. execute_action
+- call adapter / MCP tool layer with least-privileged credential
+- only for allowed operations
+
+10. format_response
+- prepare chat-ready answer
+- include query preview
+- include explanation
+- include warnings
+- include execution summary
+- include trace summary
+
+11. audit_log
+- log full action trail
+- policy result
+- selected database/persona/environment
+- execution status
+
+==================================================
+5. DATABASE SUBGRAPH REQUIREMENTS
+==================================================
+
+Create a dedicated subgraph for each database.
+
+A. MongoDB subgraph
+Include nodes such as:
+- mongo_context_loader
+- mongo_schema_agent
+- mongo_aggregation_agent
+- mongo_index_review_agent
+- mongo_validator
+- mongo_execution_plan_builder
+
+Behavior:
+- handle collections, inferred schema, aggregation pipeline generation
+- support read-only operations first
+- provide index hints and aggregation explanation
+
+B. Oracle subgraph
+Include nodes such as:
+- oracle_context_loader
+- oracle_schema_agent
+- oracle_sql_agent
+- oracle_explain_agent
+- oracle_diagnostics_agent
+- oracle_validator
+- oracle_execution_plan_builder
+
+Behavior:
+- handle schemas, tables, views, metadata
+- support explain/diagnostics-oriented workflows
+- generate read-only SQL first
+- stricter production controls
+
+C. MySQL subgraph
+Include nodes such as:
+- mysql_context_loader
+- mysql_schema_agent
+- mysql_sql_agent
+- mysql_explain_agent
+- mysql_diagnostics_agent
+- mysql_validator
+- mysql_execution_plan_builder
+
+Behavior:
+- support SQL generation, explain suggestions, schema help, diagnostics
+
+==================================================
+6. SUB-AGENT DESIGN RULES
+==================================================
+
+Do not make every node an LLM call.
+
+Use LLM-backed nodes only where reasoning is needed:
+- intent classification
+- SQL / aggregation generation
+- explanation
+- recommendation
+
+Use deterministic nodes for:
+- auth
+- permission loading
+- policy checks
+- credential selection
+- execution
+- audit logging
+- approval creation
+- environment restrictions
+- read-only detection
+- validation wrappers where possible
+
+Separate reasoning from enforcement.
+Security must never depend only on prompt instructions.
+
+==================================================
+7. STATE DESIGN
+==================================================
+
+Design a strongly typed LangGraph state object.
+
+Include fields such as:
+- request_id
+- session_id
+- user_id
+- user_message
+- selected_database
+- selected_persona
+- selected_environment
+- actual_user_roles
+- effective_permissions
+- permission_scope
+- intent_category
+- target_entities
+- schema_context
+- generated_query
+- generated_pipeline
+- validator_result
+- safety_result
+- approval_required
+- approval_reason
+- execution_allowed
+- execution_result
+- response_text
+- warnings
+- trace_steps
+- audit_metadata
+- error_state
+
+Use Pydantic or TypedDict as appropriate.
+Show the recommended state schema.
+
+==================================================
+8. ROUTING LOGIC
+==================================================
+
+Implement routing logic for:
+- database selection
+- persona-aware behavior
+- intent-based branching
+- environment-aware restrictions
+
+Examples:
+- MongoDB + Developer + Dev + query_generation → MongoDB subgraph, readonly path
+- Oracle + DBA + Prod + diagnostics → Oracle subgraph, diagnostics path
+- MySQL + Operations + Prod + health_check → MySQL subgraph, health/diagnostics path
+- Any write-like action in prod → approval gate
+
+Show how LangGraph conditional edges or commands should be used.
+
+==================================================
+9. RBAC AND LEAST PRIVILEGE
+==================================================
+
+Design this explicitly.
+
+Requirements:
+- frontend persona selection is only a requested mode
+- backend must verify actual user role eligibility
+- deny by default
+- readonly by default
+- permission scopes must be explicit
+- use separate credentials by db + env + role
+- dangerous actions require approval or temporary elevation
+- policy checks must happen before execution
+- policy checks must also be logged
+
+Provide:
+- permission evaluation flow
+- sample permission matrix structure
+- suggested policy service interface
+- suggested credential broker interface
+
+==================================================
+10. MCP INTEGRATION
+==================================================
+
+Assume I may use MCP servers/tools for some database integrations.
+
+Show how to integrate MCP into LangGraph cleanly:
+- where MCP adapters fit
+- how tools are loaded
+- whether MCP should be called from sub-agents or adapter services
+- how to keep MCP under the database-specific paths
+- how to avoid exposing every tool directly to the top-level supervisor
+
+Important:
+- top-level supervisor should not directly call raw database tools
+- database subgraphs should own database-specific tool usage
+- MCP tools should be wrapped in controlled adapter/service layers if needed
+
+==================================================
+11. FASTAPI INTEGRATION
+==================================================
+
+I want this system served through FastAPI.
+
+Generate:
+- recommended FastAPI app structure
+- endpoints such as:
+  - POST /chat/message
+  - GET /chat/history/{session_id}
+  - POST /approval/{request_id}
+  - GET /trace/{request_id}
+  - GET /permissions/me
+- streaming strategy using SSE or websocket
+- how FastAPI calls LangGraph
+- how session IDs and user context flow into graph state
+
+==================================================
+12. CHECKPOINTING AND MEMORY
+==================================================
+
+Use LangGraph checkpointing or memory appropriately.
+
+Requirements:
+- conversation sessions should persist
+- graph state per session should be recoverable
+- support chat history
+- keep tool traces and approval state
+
+Recommend:
+- which checkpointer to use initially
+- what to persist in MVP
+- what to persist later
+- how to handle subgraph persistence
+
+==================================================
+13. OBSERVABILITY
+==================================================
+
+Design observability for enterprise debugging.
+
+Include:
+- structured logging
+- graph node trace events
+- policy decision logs
+- execution logs
+- approval logs
+- latency metrics by database and node
+- failure reasons
+- audit records
+
+Show where instrumentation should be placed in graph nodes.
+
+==================================================
+14. FOLDER STRUCTURE
+==================================================
+
+Generate a production-friendly Python project structure, for example:
+
+backend/
+  app/
+    api/
+    core/
+    graph/
+    graph/nodes/
+    graph/subgraphs/
+    agents/
+    policies/
+    adapters/
+    services/
+    models/
+    schemas/
+    approvals/
+    audit/
+    observability/
+    tests/
+
+But improve it properly for this project.
+
+==================================================
+15. CODE GENERATION REQUIREMENTS
+==================================================
+
+Generate code skeletons or implementation-ready pseudocode for:
+- state model
+- top-level graph builder
+- supervisor node
+- database router node
+- one sample MongoDB subgraph
+- policy precheck node
+- approval gate node
+- execution node
+- formatter node
+- FastAPI endpoint integration
+
+Use Python.
+Prefer LangGraph idioms.
+Use current best practices for graph composition, subgraphs, and supervisor patterns.
+
+==================================================
+16. QUALITY RULES
+==================================================
+
+The output must be:
+- implementation-oriented
+- not vague
+- production-minded
+- explicit about node responsibilities
+- explicit about deterministic vs LLM nodes
+- explicit about where security enforcement occurs
+- explicit about where MCP fits
+- explicit about session state and persistence
+- explicit about approval handling
+
+Avoid:
+- generic high-level architecture only
+- toy examples unrelated to databases
+- skipping folder structure
+- skipping state schema
+- putting security logic only inside prompts
+- one monolithic agent with no graph structure
+
+==================================================
+17. FINAL OUTPUT FORMAT
+==================================================
+
+Return the answer in this structure:
+
+1. Solution Summary
+2. LangGraph Top-Level Graph
+3. State Schema
+4. Node Responsibilities
+5. Database Subgraphs
+6. Routing and Conditional Edges
+7. RBAC / Least Privilege Design
+8. MCP Integration Plan
+9. FastAPI Integration
+10. Persistence / Checkpointing
+11. Observability
+12. Folder Structure
+13. Key Code Skeletons
+14. MVP Build Order
+15. Risks and Mitigations
+
+Be detailed and concrete.
+When useful, include:
+- ASCII diagrams
+- tables
+- code blocks
+- folder trees
+- typed models
+- sample interfaces
+
+If something is ambiguous, choose the safest production-oriented default.
